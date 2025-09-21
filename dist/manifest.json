@@ -2,16 +2,25 @@
   {
     "category": "Metadata",
     "guid": "0c136f8a-ff77-4f2b-ade5-13462cae6216",
-    "name": "КиноПоиск_i", 
-    "overview": "i_Информация о фильмах и сериалах с КиноПоиска",
-    "owner": "LinFor & skrashevich",
-    "description": "[IV] Загружает рейтинг, описания, актёров, трейлеры и т.д. с сайта КиноПоиск. Может потребоваться зарегистрировать свой ApiToken, см. информацию в параметрах плагина. Для точного распознавания рекомендуется указывать id фильма с сайта КиноПоиск в имени файла в формате kp-12345 или kp12345. Подробнее см. https://github.com/LinFor/jellyfin-plugin-kinopoisk/blob/master/README.md\n",
+    "name": "КиноПоиск",
+    "overview": "Информация о фильмах и сериалах с КиноПоиска",
+    "owner": "wormi4ok",
+    "description": "Загружает рейтинг, описания, актёров, трейлеры и т.д. с сайта КиноПоиск. Может потребоваться зарегистрировать свой ApiToken, см. информацию в параметрах плагина. Для точного распознавания рекомендуется указывать id фильма с сайта КиноПоиск в имени файла в формате kp-12345 или kp12345. Подробнее см. https://github.com/wormi4ok/jellyfin-plugin-kinopoisk/blob/master/README.md\n",
     "imageUrl": "https://kinopoisk.userecho.com/s/attachments/28876/0/1/25f8c0315e6ccb2aa6c2642e48f2c9e9.png",
-    "versions": [ 
-       { 
+    "versions": [
+      {
+        "version": "0.0.1",
+        "checksum": "de41df8a96ecc9437fed7680c345e231",
+        "changelog": "new release",
+        "name": "КиноПоиск",
+        "targetAbi": "10.10.0",
+        "sourceUrl": "https://raw.githubusercontent.com/wormi4ok/jellyfin-plugin-kinopoisk/master/dist/kinopoisk/kinopoisk_0.0.1.zip",
+        "timestamp": "2025-09-21T14:24:28Z"
+      },
+      {
         "version": "10.9.0.4",
         "checksum": "4212e9d59fe290551c10221ee0287b61",
-        "changelog": "new release iv",
+        "changelog": "Release from a fork",
         "name": "КиноПоиск",
         "targetAbi": "10.10.3",
         "sourceUrl": "https://raw.githubusercontent.com/ivspbitec/jellyfin-plugin-kinopoisk/master/dist/kinopoisk/kinopoisk_iv_10.9.0.4.zip",
