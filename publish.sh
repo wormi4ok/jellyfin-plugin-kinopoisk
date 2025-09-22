@@ -1,6 +1,6 @@
 #!/bin/bash
-VERSION="0.0.1"
-CHANGELOG="Init a fork"
+VERSION="0.1.0"
+CHANGELOG="Populate production year for movies"
 
 check_command() {
     if ! command -v $1 &> /dev/null
@@ -52,8 +52,7 @@ jq --arg HASH "$HASH" --arg URL "https://raw.githubusercontent.com/wormi4ok/jell
     '.[0].versions |= [{"version": $VERSION, "checksum": $HASH, "changelog": "new release", "name": "\u041a\u0438\u043d\u043e\u041f\u043e\u0438\u0441\u043a", "targetAbi": "10.10.7", "sourceUrl": $URL, "timestamp": $TIMESTAMP}] + .' \
     "$(pwd)/dist/manifest.json" > "$(pwd)/dist/manifest.json.tmp" && \
     mv "$(pwd)/dist/manifest.json.tmp" "$(pwd)/dist/manifest.json"
-exit
-rm -rf ./artifacts/*
+exit 0
 git add "$RELEASEDIR.zip" "dist/manifest.json" "publish.sh" "src/Jellyfin.Plugin.Kinopoisk/build.yaml" && \
 git commit -m "version $VERSION" && \
 git tag -f "v$VERSION" && \
