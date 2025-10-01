@@ -11,7 +11,7 @@
       {
         "version": "0.1.0",
         "checksum": "7837a2032ab898ed7d880f4d86ef1d7e",
-        "changelog": "new release",
+        "changelog": "Populate production year for movies",
         "name": "КиноПоиск",
         "targetAbi": "10.10.7",
         "sourceUrl": "https://raw.githubusercontent.com/wormi4ok/jellyfin-plugin-kinopoisk/master/dist/kinopoisk/kinopoisk_0.1.0.zip",
