@@ -16,7 +16,7 @@ namespace Jellyfin.Plugin.Kinopoisk
 
         public override string Description => Constants.ProviderDescription;
 
-        public override Guid Id => Guid.Parse("33e6d249-648f-44cd-a9ce-497be06c08df");
+        public override Guid Id => Guid.Parse("0c136f8a-ff77-4f2b-ade5-13462cae6216");
 
         public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer) : base(applicationPaths, xmlSerializer)
         {

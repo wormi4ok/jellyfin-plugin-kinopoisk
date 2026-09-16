@@ -1,59 +1,91 @@
 #!/bin/bash
-VERSION="0.1.0"
-CHANGELOG="Populate production year for movies"
+set -euo pipefail
+
+VERSION="0.2.0"
+CHANGELOG="Rebuilt for Jellyfin 12"
+TARGET_ABI="12.0.0.0"
+FRAMEWORK="net10.0"
+
+# Releases live on their own branch; the manifest and the zips sit at its root.
+BRANCH="release"
+BASE_URL="https://raw.githubusercontent.com/wormi4ok/jellyfin-plugin-kinopoisk/$BRANCH"
+
+BUILD_YAML="src/Jellyfin.Plugin.Kinopoisk/build.yaml"
 
 check_command() {
-    if ! command -v $1 &> /dev/null
+    if ! command -v "$1" &> /dev/null
     then
         echo "Error: $1 could not be found. Please install it."
         exit 1
     fi
 }
 
-# Check for required commands
-check_command gsed
+for cmd in gsed jq zip md5sum dotnet git; do check_command "$cmd"; done
+
+cd "$(dirname "$0")"
 
 find . -name project.assets.json -delete
 
-gsed -i'' "s/version: .*/version: \"$VERSION\"/" src/Jellyfin.Plugin.Kinopoisk/build.yaml
-BUILDYAML=`head -$(grep -n "changelog: >" src/Jellyfin.Plugin.Kinopoisk/build.yaml | head -1 | cut -d: -f1) src/Jellyfin.Plugin.Kinopoisk/build.yaml`
-echo -e "$BUILDYAML\n  $CHANGELOG" > src/Jellyfin.Plugin.Kinopoisk/build.yaml
+gsed -i "s/^version: .*/version: \"$VERSION\"/" "$BUILD_YAML"
+gsed -i "s/^targetAbi: .*/targetAbi: \"$TARGET_ABI\"/" "$BUILD_YAML"
+gsed -i "s/^framework: .*/framework: \"$FRAMEWORK\"/" "$BUILD_YAML"
+# changelog is a folded block and always last: truncate at its key, re-append the body
+BUILDYAML=$(head -"$(grep -n "changelog: >" "$BUILD_YAML" | head -1 | cut -d: -f1)" "$BUILD_YAML")
+printf '%s\n  %s\n' "$BUILDYAML" "$CHANGELOG" > "$BUILD_YAML"
 
 dotnet restore ./src/Jellyfin.Plugin.Kinopoisk/
 dotnet build --configuration Release ./src/Jellyfin.Plugin.Kinopoisk/
 
-RELEASEDIR="$(pwd)/dist/kinopoisk/kinopoisk_$VERSION"
-rm -rf "$RELEASEDIR" "$RELEASEDIR.zip"
-mkdir -p "$RELEASEDIR"
-cp "$(pwd)/src/Jellyfin.Plugin.Kinopoisk/bin/Release/net8.0/Jellyfin.Plugin.Kinopoisk.dll" "$RELEASEDIR/"
-cp "$(pwd)/src/KinopoiskUnofficialInfo.ApiClient/bin/Release/net8.0/KinopoiskUnofficialInfo.ApiClient.dll" "$RELEASEDIR/"
-cat << EOF > "dist/kinopoisk/kinopoisk_$VERSION/meta.json"
+STAGING=$(mktemp -d)
+WORKTREE=$(mktemp -d)
+trap 'rm -rf "$STAGING"' EXIT
+git worktree add --quiet "$WORKTREE" "$BRANCH"
+
+cp "src/Jellyfin.Plugin.Kinopoisk/bin/Release/$FRAMEWORK/Jellyfin.Plugin.Kinopoisk.dll" "$STAGING/"
+cp "src/KinopoiskUnofficialInfo.ApiClient/bin/Release/$FRAMEWORK/KinopoiskUnofficialInfo.ApiClient.dll" "$STAGING/"
+
+TIMESTAMP=$(date -u "+%Y-%m-%dT%H:%M:%SZ")
+cat << EOF > "$STAGING/meta.json"
 {
     "category": "Metadata",
     "changelog": "$CHANGELOG",
-    "description": "\u0417\u0430\u0433\u0440\u0443\u0436\u0430\u0435\u0442 \u0440\u0435\u0439\u0442\u0438\u043d\u0433, \u043e\u043f\u0438\u0441\u0430\u043d\u0438\u044f, \u0430\u043a\u0442\u0451\u0440\u043e\u0432, \u0442\u0440\u0435\u0439\u043b\u0435\u0440\u044b \u0438 \u0442.\u0434. \u0441 \u0441\u0430\u0439\u0442\u0430 \u041a\u0438\u043d\u043e\u041f\u043e\u0438\u0441\u043a. \u041c\u043e\u0436\u0435\u0442 \u043f\u043e\u0442\u0440\u0435\u0431\u043e\u0432\u0430\u0442\u044c\u0441\u044f \u0437\u0430\u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0441\u0432\u043e\u0439 ApiToken, \u0441\u043c. \u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044e \u0432 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u0430\u0445 \u043f\u043b\u0430\u0433\u0438\u043d\u0430. \u0414\u043b\u044f \u0442\u043e\u0447\u043d\u043e\u0433\u043e \u0440\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u0432\u0430\u043d\u0438\u044f \u0440\u0435\u043a\u043e\u043c\u0435\u043d\u0434\u0443\u0435\u0442\u0441\u044f \u0443\u043a\u0430\u0437\u044b\u0432\u0430\u0442\u044c id \u0444\u0438\u043b\u044c\u043c\u0430 \u0441 \u0441\u0430\u0439\u0442\u0430 \u041a\u0438\u043d\u043e\u041f\u043e\u0438\u0441\u043a \u0432 \u0438\u043c\u0435\u043d\u0438 \u0444\u0430\u0439\u043b\u0430 \u0432 \u0444\u043e\u0440\u043c\u0430\u0442\u0435 kp-12345 \u0438\u043b\u0438 kp12345. \u041f\u043e\u0434\u0440\u043e\u0431\u043d\u0435\u0435 \u0441\u043c. https://github.com/wormi4ok/jellyfin-plugin-kinopoisk/blob/master/README.md\n",
+    "description": "Загружает рейтинг, описания, актёров, трейлеры и т.д. с сайта КиноПоиск. Может потребоваться зарегистрировать свой ApiToken, см. информацию в параметрах плагина. Для точного распознавания рекомендуется указывать id фильма с сайта КиноПоиск в имени файла в формате kp-12345 или kp12345. Подробнее см. https://github.com/wormi4ok/jellyfin-plugin-kinopoisk/blob/master/README.md\n",
     "guid": "0c136f8a-ff77-4f2b-ade5-13462cae6216",
     "imageUrl": "https://kinopoisk.userecho.com/s/attachments/28876/0/1/25f8c0315e6ccb2aa6c2642e48f2c9e9.png",
-    "name": "\u041a\u0438\u043d\u043e\u041f\u043e\u0438\u0441\u043a",
-    "overview": "\u0418\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044f \u043e \u0444\u0438\u043b\u044c\u043c\u0430\u0445 \u0438 \u0441\u0435\u0440\u0438\u0430\u043b\u0430\u0445 \u0441 \u041a\u0438\u043d\u043e\u041f\u043e\u0438\u0441\u043a\u0430",
+    "name": "КиноПоиск",
+    "overview": "Информация о фильмах и сериалах с КиноПоиска",
     "owner": "wormi4ok",
-    "targetAbi": "10.10.0",
-    "timestamp": "$(date -u "+%Y-%m-%dT%H:%M:%SZ")",
+    "targetAbi": "$TARGET_ABI",
+    "timestamp": "$TIMESTAMP",
     "version": "$VERSION"
 }
 EOF
-echo $( cd $RELEASEDIR; zip -j "../kinopoisk_$VERSION.zip" *)
-rm -rf "$RELEASEDIR" 
-HASH=$(md5sum "$RELEASEDIR.zip" | cut -d' ' -f1)
 
-jq --arg HASH "$HASH" --arg URL "https://raw.githubusercontent.com/wormi4ok/jellyfin-plugin-kinopoisk/master/dist/kinopoisk/kinopoisk_$VERSION.zip" \
-    --arg TIMESTAMP "$(date -u "+%Y-%m-%dT%H:%M:%SZ")" \
-    --arg VERSION "$VERSION" \
-    '.[0].versions |= [{"version": $VERSION, "checksum": $HASH, "changelog": "new release", "name": "\u041a\u0438\u043d\u043e\u041f\u043e\u0438\u0441\u043a", "targetAbi": "10.10.7", "sourceUrl": $URL, "timestamp": $TIMESTAMP}] + .' \
-    "$(pwd)/dist/manifest.json" > "$(pwd)/dist/manifest.json.tmp" && \
-    mv "$(pwd)/dist/manifest.json.tmp" "$(pwd)/dist/manifest.json"
-exit 0
-git add "$RELEASEDIR.zip" "dist/manifest.json" "publish.sh" "src/Jellyfin.Plugin.Kinopoisk/build.yaml" && \
-git commit -m "version $VERSION" && \
-git tag -f "v$VERSION" && \
-git push --force && git push --tags --force
+ZIP="$WORKTREE/kinopoisk_$VERSION.zip"
+rm -f "$ZIP"
+( cd "$STAGING" && zip -jq "$ZIP" ./* )
+HASH=$(md5sum "$ZIP" | cut -d' ' -f1)
+
+jq --arg HASH "$HASH" \
+   --arg URL "$BASE_URL/kinopoisk_$VERSION.zip" \
+   --arg TIMESTAMP "$TIMESTAMP" \
+   --arg VERSION "$VERSION" \
+   --arg CHANGELOG "$CHANGELOG" \
+   --arg TARGET_ABI "$TARGET_ABI" \
+   '.[0].versions |= [{"version": $VERSION, "checksum": $HASH, "changelog": $CHANGELOG, "name": "КиноПоиск", "targetAbi": $TARGET_ABI, "sourceUrl": $URL, "timestamp": $TIMESTAMP}] + .' \
+   "$WORKTREE/manifest.json" > "$WORKTREE/manifest.json.tmp"
+mv "$WORKTREE/manifest.json.tmp" "$WORKTREE/manifest.json"
+
+git -C "$WORKTREE" add "manifest.json" "kinopoisk_$VERSION.zip"
+git -C "$WORKTREE" commit --quiet -m "Release $VERSION"
+git worktree remove "$WORKTREE"
+
+cat <<EOF
+
+Committed $VERSION to the '$BRANCH' branch. Nothing has been pushed.
+
+  git show $BRANCH
+  git push origin $BRANCH
+
+Commit $BUILD_YAML on this branch too.
+EOF
