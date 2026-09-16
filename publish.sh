@@ -11,6 +11,7 @@ BRANCH="release"
 BASE_URL="https://raw.githubusercontent.com/wormi4ok/jellyfin-plugin-kinopoisk/$BRANCH"
 
 BUILD_YAML="src/Jellyfin.Plugin.Kinopoisk/build.yaml"
+CSPROJ="src/Jellyfin.Plugin.Kinopoisk/Jellyfin.Plugin.Kinopoisk.csproj"
 
 check_command() {
     if ! command -v "$1" &> /dev/null
@@ -29,6 +30,9 @@ find . -name project.assets.json -delete
 gsed -i "s/^version: .*/version: \"$VERSION\"/" "$BUILD_YAML"
 gsed -i "s/^targetAbi: .*/targetAbi: \"$TARGET_ABI\"/" "$BUILD_YAML"
 gsed -i "s/^framework: .*/framework: \"$FRAMEWORK\"/" "$BUILD_YAML"
+gsed -i "s|<Version>.*</Version>|<Version>$VERSION</Version>|" "$CSPROJ"
+gsed -i "s|<AssemblyVersion>.*</AssemblyVersion>|<AssemblyVersion>$VERSION.0</AssemblyVersion>|" "$CSPROJ"
+gsed -i "s|<FileVersion>.*</FileVersion>|<FileVersion>$VERSION.0</FileVersion>|" "$CSPROJ"
 # changelog is a folded block and always last: truncate at its key, re-append the body
 BUILDYAML=$(head -"$(grep -n "changelog: >" "$BUILD_YAML" | head -1 | cut -d: -f1)" "$BUILD_YAML")
 printf '%s\n  %s\n' "$BUILDYAML" "$CHANGELOG" > "$BUILD_YAML"
